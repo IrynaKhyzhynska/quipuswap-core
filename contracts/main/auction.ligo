@@ -64,7 +64,7 @@ var store              : storage_t)
 ((nil : list (operation)),
 case action of
 | Update_admin(new_admin)  -> update_admin (new_admin, store)
-| Config                   -> config (data, store)
+| Config(data)             -> config (data, store)
 | Bet(bid)                 -> bet (bid, store)
 end)
 
