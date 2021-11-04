@@ -67,4 +67,3 @@ case action of
 | Config(data)             -> config (data, store)
 | Bet(bid)                 -> bet (bid, store)
 end)
-
