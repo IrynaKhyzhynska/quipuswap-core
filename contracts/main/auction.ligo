@@ -1,38 +1,70 @@
 
-type storage_t is record [
-   min_bid : nat;
-   time_threshold : nat;
-   delay : nat;
-   highest_bit : nat;
-   admin : address; 
-   winner : address
+type storage_t         is [@layout:comb] record [
+   min_bid             : nat;
+   time_threshold      : nat;
+   delay               : nat;
+   highest_bit         : nat;
+   admin               : address; 
+   winner              : address
  ]
-type parameter is Update_admin | Config | Bet
-type participant is record [address: address; bet: int]
-type return is list (operation) * storage_t
+type parameter_t is 
+| Update_admin         of address
+| Config 
+| Bet                  of nat
 
-function bet (const My_bet : participant; const store : storage_t) : storage_t is
+type bid_t             is nat
+type return_t          is (list (operation) * storage_t)
+
+function bet (
+const bid              : bid_t; 
+var store              : storage_t) 
+                       : storage_t is
 block {
-if   My_bet.bet > min_bid
-then highest_bit := bet
-     winner := bet.address
-else ((nil: list (operation), store))
-}
+if   bid >= store.min_bid
+then patch store with record [
+     store.highest_bit := bid;
+     store.winner      := Tezos.sender;
+     ]
+else (failwith("Low bid"))
+} with store
 
-function update_admin (const new_admin : address) : storage_t is
+function update_admin (
+const new_admin        : address;
+var store              : storage_t) 
+                       : storage_t is
 block {
-  if   Tezos.source =/= storage_t.admin
-  then (failwith ("Only admin can do it") : return)
-  else admin := new_admin
-}
+  if   Tezos.sender =/= store.admin
+  then failwith ("Only admin can do it")
+  else store.admin := new_admin
+} with store
+ 
+type param_t is [@layout:comb] record [
+   min_bid             : nat;
+   time_threshold      : nat; 
+   delay               : nat;
+]
+function config (
+  const data           : param_t;
+  var store            : storage_t)
+                       : storage_t is
+block {
+  if Tezos.sender <> store.admin
+  then failwith("Only admin can do it")
+  else patch store with record [
+       store.min_bid        := data.min_bid;
+       store.time_threshold := data.time_threshold;
+       store.delay          := data.delay;
+  ] with store
+} 
 
-function config (participant)
-
-function main (const action : parameter; const store : storage_t) : return is 
-(((nil : list (operation)), store)
+function main (
+const action           : parameter_t; 
+var store              : storage_t) 
+                       : return_t is 
+((nil : list (operation)),
 case action of
-  Update_admin  -> update_admin (new_admin)
-| Config        -> config ()
-| Bet           -> bet (My_bet, store)
+| Update_admin(new_admin)  -> update_admin (new_admin, store)
+| Config                   -> config (data, store)
+| Bet(bid)                 -> bet (bid, store)
 end)
 
